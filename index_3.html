@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flarix Premium Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0088cc;
+            --primary-light: #00aaff;
+            --accent: #ff9500;
+            --bg: var(--tg-theme-bg-color, #ffffff);
+            --text: var(--tg-theme-text-color, #222222);
+            --hint: var(--tg-theme-hint-color, #999999);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f7);
+            --button: var(--tg-theme-button-color, #0088cc);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+            --card-bg: var(--tg-theme-bg-color, #ffffff);
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--secondary-bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Header Styling */
+        .header {
+            background-color: var(--bg);
+            padding: 20px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+            box-shadow: 0 4px 10px rgba(0, 136, 204, 0.3);
+        }
+
+        .brand-name {
+            font-weight: 800;
+            font-size: 1.2em;
+            letter-spacing: -0.5px;
+        }
+
+        .balance-badge {
+            background-color: var(--secondary-bg);
+            padding: 8px 15px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .balance-amount {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* Search & Filters */
+        .top-section {
+            padding: 15px;
+            background-color: var(--bg);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--hint);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border-radius: 15px;
+            border: 1.5px solid transparent;
+            background-color: var(--secondary-bg);
+            color: var(--text);
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            background-color: var(--bg);
+            box-shadow: 0 0 0 4px rgba(0, 136, 204, 0.1);
+        }
+
+        .categories-wrapper {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 5px;
+            scrollbar-width: none;
+        }
+
+        .categories-wrapper::-webkit-scrollbar { display: none; }
+
+        .cat-item {
+            padding: 10px 20px;
+            background-color: var(--secondary-bg);
+            border-radius: 12px;
+            white-space: nowrap;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .cat-item.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+        }
+
+        /* Service Cards */
+        .services-grid {
+            padding: 15px;
+            display: grid;
+            gap: 15px;
+        }
+
+        .service-card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.03);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            transition: transform 0.2s;
+        }
+
+        .service-card:active {
+            transform: scale(0.98);
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .service-name {
+            font-weight: 700;
+            font-size: 1.05em;
+            line-height: 1.4;
+            flex: 1;
+            padding-left: 10px;
+        }
+
+        .service-price {
+            text-align: left;
+        }
+
+        .price-val {
+            display: block;
+            font-size: 1.2em;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .price-unit {
+            font-size: 0.7em;
+            color: var(--hint);
+            text-transform: uppercase;
+        }
+
+        .service-info-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+            color: var(--hint);
+        }
+
+        .info-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--secondary-bg);
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+
+        .order-button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 15px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 136, 204, 0.2);
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 2000;
+            align-items: flex-end;
+        }
+
+        .modal-sheet {
+            background: var(--bg);
+            width: 100%;
+            border-radius: 30px 30px 0 0;
+            padding: 25px;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-title {
+            font-size: 1.3em;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid var(--secondary-bg);
+            background: var(--secondary-bg);
+            color: var(--text);
+            margin-top: 8px;
+            outline: none;
+            font-size: 1em;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            background: var(--bg);
+        }
+
+        .summary-box {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 20px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label { font-weight: 600; color: var(--hint); }
+        .total-amount { font-size: 1.5em; font-weight: 900; color: var(--primary); }
+
+        .confirm-btn {
+            width: 100%;
+            padding: 18px;
+            border-radius: 18px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 1.1em;
+            box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2);
+        }
+
+        /* Skeleton Loader */
+        .skeleton {
+            background: linear-gradient(90deg, var(--secondary-bg) 25%, var(--bg) 50%, var(--secondary-bg) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo-area">
+            <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+            <div class="brand-name">FLARIX <span style="color: var(--primary);">PRO</span></div>
+        </div>
+        <div class="balance-badge">
+            <i class="fas fa-wallet" style="color: var(--primary);"></i>
+            <span class="balance-amount" id="balance">0.00</span>
+            <span style="font-size: 0.8em; font-weight: bold;">$</span>
+        </div>
+    </div>
+
+    <div class="top-section">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" class="search-input" placeholder="ابحث عن خدمة مميزة..." id="search">
+        </div>
+        <div class="categories-wrapper" id="cats">
+            <div class="cat-item active" data-cat="all">✨ الكل</div>
+            <div class="cat-item" data-cat="instagram">📸 إنستغرام</div>
+            <div class="cat-item" data-cat="tiktok">🎵 تيك توك</div>
+            <div class="cat-item" data-cat="facebook">👥 فيسبوك</div>
+            <div class="cat-item" data-cat="telegram">📢 تلغرام</div>
+        </div>
+    </div>
+
+    <div class="services-grid" id="services">
+        <!-- سيتم توليد الخدمات هنا -->
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-backdrop" id="modal">
+        <div class="modal-sheet">
+            <div style="width: 40px; height: 5px; background: var(--secondary-bg); border-radius: 10px; margin: 0 auto 20px;"></div>
+            <div class="modal-title" id="m-title">اسم الخدمة</div>
+            <p id="m-desc" style="color: var(--hint); font-size: 0.9em; margin-bottom: 20px;"></p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: 700; font-size: 0.9em;">رابط الوجهة</label>
+                <input type="text" class="input-field" id="m-link" placeholder="انسخ الرابط هنا...">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: 700; font-size: 0.9em;">الكمية المطلوبة</label>
+                <input type="number" class="input-field" id="m-qty" value="1000">
+            </div>
+
+            <div class="summary-box">
+                <span class="total-label">التكلفة الإجمالية</span>
+                <span class="total-amount" id="m-total">0.00 $</span>
+            </div>
+
+            <button class="confirm-btn" onclick="confirmOrder()">تأكيد وإرسال الطلب</button>
+            <button style="width: 100%; background: none; border: none; color: var(--hint); margin-top: 15px; font-weight: 600;" onclick="closeModal()">إلغاء</button>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.headerColor = 'secondary_bg_color';
+
+        const data = [
+            { id: 1, cat: 'instagram', name: 'متابعين إنستغرام VIP - ضمان 365 يوم', rate: 0.85, min: 100, desc: 'خدمة فائقة الجودة، حسابات حقيقية مع صور ومنشورات.' },
+            { id: 2, cat: 'instagram', name: 'لايكات إنستغرام - سرعة البرق', rate: 0.12, min: 50, desc: 'تصل اللايكات خلال ثوانٍ من الطلب.' },
+            { id: 3, cat: 'tiktok', name: 'مشاهدات تيك توك - تريند عالمي', rate: 0.05, min: 1000, desc: 'تساعد في رفع الفيديو للاكسبلور.' },
+            { id: 4, cat: 'telegram', name: 'أعضاء قنوات تلغرام - حقيقي', rate: 1.50, min: 100, desc: 'أعضاء متفاعلين لزيادة مصداقية قناتك.' },
+            { id: 5, cat: 'facebook', name: 'متابعين بروفايل فيسبوك', rate: 2.10, min: 500, desc: 'متابعين لحسابك الشخصي بجودة عالية.' }
+        ];
+
+        let activeService = null;
+
+        function render(filter = 'all', search = '') {
+            const container = document.getElementById('services');
+            container.innerHTML = '';
+            
+            const filtered = data.filter(s => {
+                const matchCat = filter === 'all' || s.cat === filter;
+                const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
+                return matchCat && matchSearch;
+            });
+
+            filtered.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'service-card';
+                div.innerHTML = `
+                    <div class="service-header">
+                        <div class="service-name">${s.name}</div>
+                        <div class="service-price">
+                            <span class="price-val">${s.rate}$</span>
+                            <span class="price-unit">لكل 1000</span>
+                        </div>
+                    </div>
+                    <div class="service-info-row">
+                        <div class="info-pill"><i class="fas fa-layer-group"></i> ${s.min} كحد أدنى</div>
+                        <div class="info-pill"><i class="fas fa-check-circle"></i> جودة VIP</div>
+                    </div>
+                    <button class="order-button" onclick="openModal(${s.id})">
+                        <i class="fas fa-shopping-cart"></i> اطلب الآن
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Event Listeners
+        document.querySelectorAll('.cat-item').forEach(item => {
+            item.onclick = (e) => {
+                document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                render(item.dataset.cat, document.getElementById('search').value);
+            };
+        });
+
+        document.getElementById('search').oninput = (e) => {
+            const activeCat = document.querySelector('.cat-item.active').dataset.cat;
+            render(activeCat, e.target.value);
+        };
+
+        function openModal(id) {
+            activeService = data.find(s => s.id === id);
+            document.getElementById('m-title').innerText = activeService.name;
+            document.getElementById('m-desc').innerText = activeService.desc;
+            document.getElementById('m-qty').value = activeService.min;
+            document.getElementById('modal').style.display = 'flex';
+            updateTotal();
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function updateTotal() {
+            const qty = document.getElementById('m-qty').value;
+            const total = (qty / 1000) * activeService.rate;
+            document.getElementById('m-total').innerText = total.toFixed(2) + ' $';
+        }
+
+        document.getElementById('m-qty').oninput = updateTotal;
+
+        function confirmOrder() {
+            const link = document.getElementById('m-link').value;
+            const qty = document.getElementById('m-qty').value;
+
+            if(!link || link.length < 5) {
+                tg.showAlert('يرجى إدخال رابط صحيح!');
+                return;
+            }
+
+            tg.showConfirm('هل أنت متأكد من إرسال الطلب؟', (ok) => {
+                if(ok) {
+                    const order = {
+                        service_id: activeService.id,
+                        link: link,
+                        quantity: qty
+                    };
+                    tg.sendData(JSON.stringify(order));
+                    tg.close();
+                }
+            });
+        }
+
+        // Init
+        render();
+        if(tg.initDataUnsafe?.user) {
+            document.getElementById('balance').innerText = "25.00"; // قيمة تجريبية
+        }
+    </script>
+</body>
+</html>
