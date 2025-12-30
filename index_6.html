@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vlarix SMM Platform</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0088cc;
+            --primary-light: #00aaff;
+            --accent: #ff9500;
+            --bg: var(--tg-theme-bg-color, #ffffff);
+            --text: var(--tg-theme-text-color, #222222);
+            --hint: var(--tg-theme-hint-color, #999999);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f7);
+            --card-bg: var(--tg-theme-bg-color, #ffffff);
+            --success: #31b545;
+            --warning: #ff9500;
+            --danger: #ef5350;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--secondary-bg);
+            color: var(--text);
+            margin: 0; padding: 0; overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--bg);
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .logo {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.2em; box-shadow: 0 4px 10px rgba(0, 136, 204, 0.2);
+        }
+
+        .balance-pill {
+            background: var(--secondary-bg);
+            padding: 6px 15px; border-radius: 20px;
+            display: flex; align-items: center; gap: 8px;
+            font-weight: 800; cursor: pointer; border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            display: flex; background: var(--bg);
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding: 10px 0; border-top: 1px solid rgba(0,0,0,0.05);
+            z-index: 1000; justify-content: space-around;
+        }
+
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 4px; color: var(--hint); font-size: 0.75em; font-weight: 600;
+            cursor: pointer; transition: 0.3s; flex: 1;
+        }
+
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { font-size: 1.4em; }
+
+        /* Content Sections */
+        .section { display: none; padding: 15px 15px 80px; animation: fadeIn 0.3s ease; }
+        .section.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Profile Card */
+        .profile-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 25px; padding: 25px; color: white;
+            margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0, 136, 204, 0.2);
+        }
+
+        .stats-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.15);
+            padding: 15px; border-radius: 15px; backdrop-filter: blur(5px);
+        }
+
+        /* Order List */
+        .order-item {
+            background: var(--bg); border-radius: 18px; padding: 15px;
+            margin-bottom: 12px; border: 1px solid rgba(0,0,0,0.03);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .status-badge {
+            padding: 4px 10px; border-radius: 8px; font-size: 0.75em; font-weight: bold;
+        }
+
+        .status-completed { background: rgba(49, 181, 69, 0.1); color: var(--success); }
+        .status-pending { background: rgba(255, 149, 0, 0.1); color: var(--warning); }
+        .status-canceled { background: rgba(239, 83, 80, 0.1); color: var(--danger); }
+
+        /* Store Styles (Simplified for brevity) */
+        .search-box { width: 100%; padding: 14px; border-radius: 15px; border: none; background: var(--bg); margin-bottom: 15px; outline: none; }
+        .service-card { background: var(--bg); border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.03); }
+        .btn-order { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--primary); color: white; font-weight: bold; margin-top: 10px; }
+
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; z-index: 2000; }
+        .sheet { background: var(--bg); width: 100%; border-radius: 30px 30px 0 0; padding: 25px; animation: slideUp 0.3s; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="brand">
+            <div class="logo"><i class="fas fa-bolt"></i></div>
+            <div style="font-weight: 900; font-size: 1.2em; letter-spacing: -0.5px;">VLARIX</div>
+        </div>
+        <div class="balance-pill" onclick="toggleCurrency()">
+            <i class="fas fa-wallet" style="color: var(--primary);"></i>
+            <span id="balance-val">0.00</span>
+            <span id="currency-label">$</span>
+        </div>
+    </div>
+
+    <!-- Store Section -->
+    <div id="store" class="section active">
+        <input type="text" class="search-box" placeholder="ابحث عن خدمة..." id="search">
+        <div id="services-list">
+            <!-- سيتم تحميل الخدمات من ملف JSON -->
+            <div style="text-align: center; padding: 50px; color: var(--hint);">جاري تحميل الخدمات...</div>
+        </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div id="orders" class="section">
+        <h3 style="margin-bottom: 15px;">سجل طلباتي</h3>
+        <div id="orders-list">
+            <!-- سيتم تحميل الطلبات هنا -->
+        </div>
+    </div>
+
+    <!-- Profile Section -->
+    <div id="profile" class="section">
+        <div class="profile-card">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div id="user-name" style="font-weight: bold; font-size: 1.2em;">مستخدم Vlarix</div>
+                    <div style="font-size: 0.8em; opacity: 0.8;">عضو VIP</div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div style="font-size: 0.7em; opacity: 0.8;">إجمالي الطلبات</div>
+                    <div id="total-orders" style="font-size: 1.3em; font-weight: 900;">0</div>
+                </div>
+                <div class="stat-box">
+                    <div style="font-size: 0.7em; opacity: 0.8;">إجمالي الإنفاق</div>
+                    <div id="total-spent" style="font-size: 1.3em; font-weight: 900;">0.00 $</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 15px;">إعدادات الحساب</h3>
+        <div class="order-item" onclick="toggleCurrency()">
+            <span>العملة المفضلة</span>
+            <span id="pref-currency" style="font-weight: bold; color: var(--primary);">USD ($)</span>
+        </div>
+        <div class="order-item" onclick="tg.showAlert('سيتم إضافة ميزة الإشعارات قريباً')">
+            <span>إشعارات الطلبات</span>
+            <span style="color: var(--success); font-weight: bold;">مفعلة</span>
+        </div>
+    </div>
+
+    <!-- Nav Bar -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="showSection('store')">
+            <i class="fas fa-shopping-bag"></i>
+            <span>المتجر</span>
+        </div>
+        <div class="nav-item" onclick="showSection('orders')">
+            <i class="fas fa-list-ul"></i>
+            <span>طلباتي</span>
+        </div>
+        <div class="nav-item" onclick="showSection('profile')">
+            <i class="fas fa-user-circle"></i>
+            <span>حسابي</span>
+        </div>
+    </div>
+
+    <!-- Order Modal -->
+    <div class="modal" id="order-modal">
+        <div class="sheet">
+            <h3 id="m-title"></h3>
+            <p id="m-desc" style="font-size: 0.85em; color: var(--hint);"></p>
+            <input type="text" class="search-box" style="background: var(--secondary-bg);" id="m-link" placeholder="رابط الوجهة...">
+            <input type="number" class="search-box" style="background: var(--secondary-bg);" id="m-qty" value="1000">
+            <div style="display: flex; justify-content: space-between; padding: 15px; background: var(--secondary-bg); border-radius: 15px; margin-bottom: 15px;">
+                <span style="font-weight: bold;">الإجمالي:</span>
+                <span id="m-total" style="font-weight: 900; color: var(--primary);">0.00 $</span>
+            </div>
+            <button class="btn-order" onclick="confirmOrder()">تأكيد الطلب</button>
+            <button style="width: 100%; background: none; border: none; color: var(--hint); margin-top: 10px;" onclick="closeModal()">إلغاء</button>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let currentCurrency = 'USD';
+        let exchangeRate = 15000;
+        let userBalance = 0;
+        let allServices = [];
+        let userOrders = [];
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            userBalance = parseFloat(params.get('balance')) || 0;
+            exchangeRate = parseFloat(params.get('rate')) || 15000;
+            
+            // محاكاة جلب الاسم من التلغرام
+            if(tg.initDataUnsafe?.user) {
+                document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name;
+            }
+
+            updateDisplay();
+            await loadServices();
+            loadOrders();
+        }
+
+        async function loadServices() {
+            try {
+                // سيقوم البوت برفع هذا الملف لـ GitHub
+                const res = await fetch('services.json');
+                allServices = await res.json();
+                renderStore();
+            } catch (e) {
+                // بيانات احتياطية في حال فشل التحميل
+                allServices = [
+                    {id: 1, name: 'متابعين إنستغرام VIP', rate: 0.8, cat: 'instagram', min: 100},
+                    {id: 2, name: 'لايكات تيك توك سريعة', rate: 0.1, cat: 'tiktok', min: 50}
+                ];
+                renderStore();
+            }
+        }
+
+        function renderStore(search = '') {
+            const list = document.getElementById('services-list');
+            list.innerHTML = '';
+            const filtered = allServices.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+            
+            filtered.forEach(s => {
+                const price = currentCurrency === 'USD' ? s.rate : s.rate * exchangeRate;
+                const unit = currentCurrency === 'USD' ? '$' : 'ل.س';
+                const div = document.createElement('div');
+                div.className = 'service-card';
+                div.innerHTML = `
+                    <div style="font-weight: bold;">${s.name}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <div style="color: var(--primary); font-weight: 900;">${price.toFixed(currentCurrency === 'USD' ? 2 : 0)} ${unit}</div>
+                        <button class="btn-order" style="width: auto; margin: 0; padding: 5px 15px;" onclick="openOrder(${s.id})">طلب</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function loadOrders() {
+            const list = document.getElementById('orders-list');
+            list.innerHTML = '';
+            // بيانات تجريبية - سيتم تمريرها من البوت لاحقاً
+            userOrders = [
+                {id: 101, name: 'متابعين إنستغرام', qty: 1000, status: 'completed', date: '2023-10-01'},
+                {id: 102, name: 'لايكات تيك توك', qty: 500, status: 'pending', date: '2023-10-02'}
+            ];
+
+            userOrders.forEach(o => {
+                const div = document.createElement('div');
+                div.className = 'order-item';
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight: bold; font-size: 0.9em;">${o.name}</div>
+                        <div style="font-size: 0.7em; color: var(--hint);">${o.date} | الكمية: ${o.qty}</div>
+                    </div>
+                    <span class="status-badge status-${o.status}">${o.status === 'completed' ? 'مكتمل' : 'قيد الانتظار'}</span>
+                `;
+                list.appendChild(div);
+            });
+            
+            document.getElementById('total-orders').innerText = userOrders.length;
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.currentTarget.classList.add('active');
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function toggleCurrency() {
+            currentCurrency = currentCurrency === 'USD' ? 'SYP' : 'USD';
+            updateDisplay();
+            renderStore();
+            document.getElementById('pref-currency').innerText = currentCurrency === 'USD' ? 'USD ($)' : 'SYP (ل.س)';
+            tg.HapticFeedback.selectionChanged();
+        }
+
+        function updateDisplay() {
+            const val = currentCurrency === 'USD' ? userBalance : userBalance * exchangeRate;
+            document.getElementById('balance-val').innerText = val.toLocaleString(undefined, {maximumFractionDigits: 2});
+            document.getElementById('currency-label').innerText = currentCurrency === 'USD' ? '$' : 'ل.س';
+        }
+
+        let activeSrv = null;
+        function openOrder(id) {
+            activeSrv = allServices.find(s => s.id === id);
+            document.getElementById('m-title').innerText = activeSrv.name;
+            document.getElementById('m-qty').value = activeSrv.min;
+            document.getElementById('order-modal').style.display = 'flex';
+            updateTotal();
+        }
+
+        function closeModal() { document.getElementById('order-modal').style.display = 'none'; }
+
+        function updateTotal() {
+            const qty = document.getElementById('m-qty').value;
+            const total = (qty / 1000) * activeSrv.rate;
+            const displayTotal = currentCurrency === 'USD' ? total : total * exchangeRate;
+            document.getElementById('m-total').innerText = displayTotal.toLocaleString() + (currentCurrency === 'USD' ? ' $' : ' ل.س');
+        }
+
+        document.getElementById('m-qty').oninput = updateTotal;
+        document.getElementById('search').oninput = (e) => renderStore(e.target.value);
+
+        function confirmOrder() {
+            const link = document.getElementById('m-link').value;
+            if(!link) { tg.showAlert('يرجى إدخال الرابط'); return; }
+            tg.sendData(JSON.stringify({action: 'new_order', id: activeSrv.id, link: link, qty: document.getElementById('m-qty').value}));
+            tg.close();
+        }
+
+        init();
+    </script>
+</body>
+</html>
