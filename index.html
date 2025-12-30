@@ -95,14 +95,6 @@
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        .status-badge {
-            padding: 4px 10px; border-radius: 8px; font-size: 0.75em; font-weight: bold;
-        }
-
-        .status-completed { background: rgba(49, 181, 69, 0.1); color: var(--success); }
-        .status-pending { background: rgba(255, 149, 0, 0.1); color: var(--warning); }
-        .status-canceled { background: rgba(239, 83, 80, 0.1); color: var(--danger); }
-
         .search-box { width: 100%; padding: 14px; border-radius: 15px; border: none; background: var(--bg); margin-bottom: 15px; outline: none; }
         .service-card { background: var(--bg); border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.03); }
         .btn-order { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--primary); color: white; font-weight: bold; margin-top: 10px; }
@@ -116,6 +108,7 @@
             border-radius: 8px; font-size: 0.7em; color: var(--primary);
             margin-bottom: 8px; font-weight: bold;
         }
+        .error-msg { text-align: center; padding: 20px; color: var(--danger); background: rgba(239, 83, 80, 0.1); border-radius: 15px; margin: 20px; }
     </style>
 </head>
 <body>
@@ -133,7 +126,7 @@
     </div>
 
     <div id="store" class="section active">
-        <input type="text" class="search-box" placeholder="ابحث عن خدمة..." id="search">
+        <input type="text" class="search-box" placeholder="ابحث عن خدمة..." id="search" oninput="renderStore()">
         <div id="services-list">
             <div style="text-align: center; padding: 50px; color: var(--hint);">جاري تحميل الخدمات...</div>
         </div>
@@ -203,7 +196,7 @@
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <div style="flex: 1;">
                     <label style="font-size: 0.8em; color: var(--hint);">الكمية:</label>
-                    <input type="number" class="search-box" style="background: var(--secondary-bg); margin-bottom: 0;" id="m-qty" value="1000">
+                    <input type="number" class="search-box" style="background: var(--secondary-bg); margin-bottom: 0;" id="m-qty" value="1000" oninput="updateTotal()">
                 </div>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 15px; background: var(--secondary-bg); border-radius: 15px; margin-bottom: 15px;">
@@ -224,6 +217,7 @@
         let userBalance = 0;
         let userId = 0;
         let allServices = [];
+        let selectedService = null;
 
         async function init() {
             const params = new URLSearchParams(window.location.search);
@@ -246,123 +240,130 @@
 
         async function loadServices() {
             try {
-                const res = await fetch('services.json?v=' + Date.now());
-                allServices = await res.json();
+                // نحاول جلب الملف بأسماء مختلفة لضمان التوافق
+                let response;
+                try {
+                    response = await fetch('services.json?v=' + Date.now());
+                } catch(e) {
+                    response = await fetch('services.js?v=' + Date.now());
+                }
+                
+                if (!response.ok) throw new Error('فشل في جلب ملف الخدمات');
+                
+                allServices = await response.json();
                 renderStore();
             } catch (e) {
-                document.getElementById('services-list').innerHTML = 
-                    '<div style="text-align: center; padding: 50px; color: var(--danger);">فشل تحميل الخدمات. تأكد من مزامنة البوت مع GitHub.</div>';
+                console.error(e);
+                document.getElementById('services-list').innerHTML = `
+                    <div class="error-msg">
+                        <i class="fas fa-exclamation-triangle"></i><br>
+                        فشل تحميل الخدمات. تأكد من وجود ملف services.json في مستودع GitHub.<br>
+                        <small>${e.message}</small>
+                    </div>`;
             }
         }
 
-        function renderStore(search = '') {
+        function updateDisplay() {
+            let displayBalance = currentCurrency === 'USD' ? userBalance : userBalance * exchangeRate;
+            let symbol = currentCurrency === 'USD' ? '$' : 'ل.س';
+            
+            document.getElementById('balance-val').innerText = displayBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('currency-label').innerText = symbol;
+            document.getElementById('profile-balance').innerText = `${displayBalance.toLocaleString()} ${symbol}`;
+            document.getElementById('pref-currency').innerText = currentCurrency === 'USD' ? 'USD ($)' : 'SYP (ل.س)';
+        }
+
+        function toggleCurrency() {
+            currentCurrency = currentCurrency === 'USD' ? 'SYP' : 'USD';
+            updateDisplay();
+            renderStore();
+        }
+
+        function showSection(id, el) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function renderStore() {
+            const query = document.getElementById('search').value.toLowerCase();
             const list = document.getElementById('services-list');
             list.innerHTML = '';
-            
+
             const filtered = allServices.filter(s => 
-                s.name.toLowerCase().includes(search.toLowerCase()) || 
-                s.category.toLowerCase().includes(search.toLowerCase())
+                s.name.toLowerCase().includes(query) || 
+                s.category.toLowerCase().includes(query)
             );
 
-            if(filtered.length === 0) {
+            if (filtered.length === 0) {
                 list.innerHTML = '<div style="text-align: center; padding: 50px; color: var(--hint);">لا توجد نتائج مطابقة.</div>';
                 return;
             }
 
             filtered.forEach(s => {
                 const price = currentCurrency === 'USD' ? s.rate : s.rate * exchangeRate;
-                const unit = currentCurrency === 'USD' ? '$' : 'ل.س';
-                const div = document.createElement('div');
-                div.className = 'service-card';
-                div.innerHTML = `
-                    <div class="category-badge">${s.category}</div>
-                    <div style="font-weight: bold; font-size: 0.95em;">${s.name}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-                        <div style="color: var(--primary); font-weight: 900; font-size: 1.1em;">
-                            ${price.toLocaleString(undefined, {maximumFractionDigits: currentCurrency === 'USD' ? 3 : 0})} ${unit}
-                            <span style="font-size: 0.6em; color: var(--hint); font-weight: normal;">/ 1000</span>
-                        </div>
-                        <button class="btn-order" style="width: auto; margin: 0; padding: 6px 18px; border-radius: 10px;" onclick="openOrder('${s.id}')">طلب</button>
+                const symbol = currentCurrency === 'USD' ? '$' : 'ل.س';
+                
+                const card = document.createElement('div');
+                card.className = 'service-card';
+                card.innerHTML = `
+                    <span class="category-badge">${s.category}</span>
+                    <div style="font-weight: bold; margin-bottom: 10px;">${s.name}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: var(--primary); font-weight: 900;">${price.toLocaleString()} ${symbol} <small style="font-size: 0.6em; color: var(--hint);">/ 1000</small></div>
+                        <button class="btn-order" style="width: auto; margin-top: 0; padding: 8px 20px;" onclick="openOrder(${s.id})">طلب</button>
                     </div>
                 `;
-                list.appendChild(div);
+                list.appendChild(card);
             });
         }
 
-        function showSection(id, el) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            el.classList.add('active');
-            tg.HapticFeedback.impactOccurred('light');
-        }
-
-        function toggleCurrency() {
-            currentCurrency = currentCurrency === 'USD' ? 'SYP' : 'USD';
-            updateDisplay();
-            renderStore(document.getElementById('search').value);
-            document.getElementById('pref-currency').innerText = currentCurrency === 'USD' ? 'USD ($)' : 'SYP (ل.س)';
-            tg.HapticFeedback.selectionChanged();
-        }
-
-        function updateDisplay() {
-            const val = currentCurrency === 'USD' ? userBalance : userBalance * exchangeRate;
-            document.getElementById('balance-val').innerText = val.toLocaleString(undefined, {maximumFractionDigits: 2});
-            document.getElementById('currency-label').innerText = currentCurrency === 'USD' ? '$' : 'ل.س';
-            document.getElementById('profile-balance').innerText = val.toLocaleString(undefined, {maximumFractionDigits: 2}) + (currentCurrency === 'USD' ? ' $' : ' ل.س');
-        }
-
-        let activeSrv = null;
         function openOrder(id) {
-            activeSrv = allServices.find(s => String(s.id) === String(id));
-            if(!activeSrv) return;
-            
-            document.getElementById('m-title').innerText = activeSrv.name;
-            document.getElementById('m-desc').innerText = `الحد الأدنى: ${activeSrv.min} | الحد الأقصى: ${activeSrv.max}`;
-            document.getElementById('m-qty').value = activeSrv.min;
-            document.getElementById('order-modal').style.display = 'flex';
+            selectedService = allServices.find(s => s.id == id);
+            document.getElementById('m-title').innerText = selectedService.name;
+            document.getElementById('m-desc').innerText = `الحد الأدنى: ${selectedService.min} | الحد الأقصى: ${selectedService.max}`;
+            document.getElementById('m-qty').value = selectedService.min;
             updateTotal();
+            document.getElementById('order-modal').style.display = 'flex';
         }
-
-        function closeModal() { document.getElementById('order-modal').style.display = 'none'; }
 
         function updateTotal() {
-            if(!activeSrv) return;
+            if (!selectedService) return;
             const qty = document.getElementById('m-qty').value;
-            const total = (qty / 1000) * activeSrv.rate;
+            const total = (qty / 1000) * selectedService.rate;
             const displayTotal = currentCurrency === 'USD' ? total : total * exchangeRate;
-            document.getElementById('m-total').innerText = displayTotal.toLocaleString(undefined, {maximumFractionDigits: 2}) + (currentCurrency === 'USD' ? ' $' : ' ل.س');
+            const symbol = currentCurrency === 'USD' ? '$' : 'ل.س';
+            document.getElementById('m-total').innerText = `${displayTotal.toLocaleString(undefined, {minimumFractionDigits: 2})} ${symbol}`;
         }
 
-        document.getElementById('m-qty').oninput = updateTotal;
-        document.getElementById('search').oninput = (e) => renderStore(e.target.value);
+        function closeModal() {
+            document.getElementById('order-modal').style.display = 'none';
+        }
 
         function confirmOrder() {
             const link = document.getElementById('m-link').value;
-            const qty = parseInt(document.getElementById('m-qty').value);
-            
-            if(!link) { tg.showAlert('يرجى إدخال الرابط'); return; }
-            if(qty < activeSrv.min || qty > activeSrv.max) {
-                tg.showAlert(`الكمية يجب أن تكون بين ${activeSrv.min} و ${activeSrv.max}`);
+            const qty = document.getElementById('m-qty').value;
+
+            if (!link) {
+                tg.showAlert('يرجى إدخال الرابط!');
                 return;
             }
 
-            const totalCost = (qty / 1000) * activeSrv.rate;
-            if(totalCost > userBalance) {
-                tg.showAlert('رصيدك غير كافٍ لإتمام هذا الطلب');
+            if (qty < selectedService.min || qty > selectedService.max) {
+                tg.showAlert(`الكمية يجب أن تكون بين ${selectedService.min} و ${selectedService.max}`);
                 return;
             }
 
-            tg.showConfirm('هل أنت متأكد من تأكيد الطلب؟ سيتم خصم المبلغ من رصيدك.', (ok) => {
-                if(ok) {
-                    tg.sendData(JSON.stringify({
-                        action: 'new_order',
-                        id: activeSrv.id,
-                        link: link,
-                        qty: qty
-                    }));
-                }
-            });
+            const orderData = {
+                action: 'new_order',
+                id: selectedService.id,
+                link: link,
+                qty: qty
+            };
+
+            tg.sendData(JSON.stringify(orderData));
+            closeModal();
         }
 
         init();
